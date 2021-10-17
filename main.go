@@ -61,13 +61,13 @@ func main() {
 	buttonNames := []string{"Διοικητής", "Αρμόδιος", "Παράβαση", "Αναζήτηση"}
 	fNames := []func(){
 		func() {
-			officer.Init(true)
+			officer.Init(GetDB(), 1)
 		}, func() {
-			officer.Init(false)
+			officer.Init(GetDB(), 0)
 		}, func() {
-			violation.Init()
+			violation.Init(GetDB())
 		}, func() {
-			search.Init()
+			search.Init(GetDB())
 		}, func() {
 			outTE.SetText(strings.ToUpper(inTE.Text()))
 		},
@@ -91,6 +91,8 @@ func main() {
 	// Or read from memory
 	// r, err := docx.ReadDocxFromMemory(data io.ReaderAt, size int64)
 	editDoc("./docs/a1.docx", "new_a1.docx", []string{"ΠΑΠΑΓΕΩΡΓΙΟΥ"}, []string{"ΠΑΠΑΓΕΩΡΓΙΟΥ2"})
+
+	db.Close()
 
 	// Or write to ioWriter
 	// docx2.Write(ioWriter io.Writer)

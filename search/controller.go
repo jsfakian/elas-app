@@ -1,6 +1,8 @@
 package search
 
 import (
+	"database/sql"
+
 	dec "github.com/lxn/walk/declarative"
 )
 
@@ -27,7 +29,7 @@ func createFields(labels, names []string) []dec.Widget {
 	return fields
 }
 
-func Init() {
+func Init(db *sql.DB) {
 	dec.MainWindow{
 		Title:  "Καταχώρηση Παράβασης",
 		Bounds: dec.Rectangle{Width: 800, Height: 600},
