@@ -8,49 +8,101 @@ import (
 )
 
 type Violation struct {
-	ID   int
-	Code string
-	Name string
+	AP                 string `json:"ap"`
+	AT                 string `json:"at"`
+	ViolationNumber    string `json:"violation_number"`
+	FirstNameDriver    string `json:"first_name_driver"`
+	LastNameDriver     string `json:"last_name_driver"`
+	RegistrationNumber string `json:"registration_number"`
+	FirstNameOwner     string `json:"first_name_owner"`
+	MiddleNameOwner    string `json:"middle_name_owner"`
+	LastNameOwner      string `json:"last_name_owner"`
+	AddressOwner       string `json:"address_owner"`
+	PublishDate        string `json:"publish_date"`
+	DocumentType       int    `json:"document_type"`
 }
 
 // We are passing db reference connection from main to our method with other parameters
-func Insert(db *sql.DB, code string, name string) {
+func Insert(db *sql.DB, ap, at, violationNumber, firstNameDriver, lastNameDriver, registrationNumber, firstNameOwner,
+	lastNameOwner, middleNameOwner, addressOwner string, documentType int) {
 	log.Println("Inserting violation record ...")
-	insertViolationSQL := `INSERT INTO violations(code, name) VALUES (?, ?, ?)`
+	insertViolationSQL := `INSERT INTO violations(ap, at, violation_number, first_name_driver, last_name_driver, 
+		registration_number, first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	statement, err := db.Prepare(insertViolationSQL) // Prepare statement. This is good to avoid SQL injections
 	if err != nil {
 		log.Error(err)
 	}
-	_, err = statement.Exec(code, name)
+	_, err = statement.Exec(ap, at, violationNumber, firstNameDriver, lastNameDriver, registrationNumber,
+		firstNameOwner, middleNameOwner, lastNameOwner, addressOwner, documentType)
 	if err != nil {
 		log.Error(err)
 	}
 }
 
-func GetByID(db *sql.DB, id int) Violation {
-	viol := Violation{}
-	row, err := db.Query("SELECT * FROM violations WHERE id = ? ", id)
+func UpdatePublishDate(db *sql.DB, ap, publishDate string) {
+	log.Println("Update violation record with record ...")
+	updateViolation := `UPDATE violations set publish_date = ? WHERE ap = ?`
+	statement, err := db.Prepare(updateViolation)
 	if err != nil {
 		log.Error(err)
 	}
-	defer row.Close()
-	for row.Next() { // Iterate and fetch the records from result cursor
-		row.Scan(&viol.ID, &viol.Code, &viol.Name)
+	_, err = statement.Exec(ap, publishDate)
+	if err != nil {
+		log.Error(err)
 	}
-
-	return viol
 }
 
-func GetByName(db *sql.DB, name string) Violation {
-	viol := Violation{}
-	row, err := db.Query("SELECT * FROM violations WHERE name = ? ", name)
+func basicGet(db *sql.DB, query string, arg ...interface{}) []*Violation {
+	violations := []*Violation{}
+
+	row, err := db.Query(query, arg...)
 	if err != nil {
-		log.Error(err)
+		log.Error("Failed query: ", err)
+		return nil
 	}
 	defer row.Close()
 	for row.Next() { // Iterate and fetch the records from result cursor
-		row.Scan(&viol.ID, &viol.Code, &viol.Name)
+		violation := new(Violation)
+		err = row.Scan(&violation.AP, &violation.AT, &violation.ViolationNumber, &violation.FirstNameDriver,
+			&violation.LastNameDriver, &violation.RegistrationNumber, &violation.FirstNameOwner,
+			&violation.MiddleNameOwner, &violation.LastNameOwner, &violation.AddressOwner, &violation.DocumentType)
+		if err != nil {
+			log.Error("Failed scanning: ", err)
+		}
+		log.Info(violation)
+		violations = append(violations, violation)
 	}
 
-	return viol
+	return violations
+}
+
+func GetByAll(db *sql.DB) []*Violation {
+	return basicGet(db, `SELECT ap, at, violation_number, first_name_driver, last_name_driver, registration_number, 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations`)
+}
+
+func GetByAP(db *sql.DB, ap string) *Violation {
+	log.Info("ap: ", ap)
+	return basicGet(db, `SELECT ap, at, violation_number, first_name_driver, last_name_driver, registration_number, 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
+	WHERE ap like ? `, ap)[0]
+}
+
+func GetByViolationNumber(db *sql.DB, violationNumber string) *Violation {
+	return basicGet(db, `SELECT ap, at, violation_number, first_name_driver, last_name_driver, registration_number, 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
+	WHERE violation_number like ? `, violationNumber)[0]
+}
+
+func GetByDriver(db *sql.DB, firstName, lastName string) []*Violation {
+	return basicGet(db, `SELECT ap, at, violation_number, first_name_driver, last_name_driver, registration_number, 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
+	WHERE first_name_driver like ? and last_name_driver like ?`, firstName, lastName)
+}
+
+func GetByOwner(db *sql.DB, firstName, lastName string) []*Violation {
+	return basicGet(db, `SELECT ap, at, violation_number, first_name_driver, last_name_driver, registration_number, 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
+	WHERE first_name_owner like ? and last_name_owner like ?`, firstName, lastName)
 }

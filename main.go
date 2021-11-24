@@ -8,35 +8,7 @@ import (
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
-	"github.com/nguyenthenguyen/docx"
-	log "github.com/sirupsen/logrus"
 )
-
-func editDoc(filein, fileout string, oldText, newText []string) bool {
-	r, err := docx.ReadDocxFile(filein)
-	// Or read from memory
-	// r, err := docx.ReadDocxFromMemory(data io.ReaderAt, size int64)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
-
-	docx1 := r.Editable()
-
-	for i := range oldText {
-		log.Info(oldText[i], newText[i])
-		docx1.Replace(oldText[i], newText[i], -1)
-		//docx1.Replace("old_1_2", "new_1_2", -1)
-		//docx1.ReplaceLink("http://example.com/", "https://github.com/nguyenthenguyen/docx")
-		//docx1.ReplaceHeader("out with the old", "in with the new")
-		//docx1.ReplaceFooter("Change This Footer", "new footer")
-	}
-
-	docx1.WriteToFile(fileout)
-	r.Close()
-
-	return true
-}
 
 func mainMenu(buttonNames []string, fNames []func()) dec.VSplitter {
 	vSplitter := dec.VSplitter{}
@@ -65,7 +37,7 @@ func main() {
 		}, func() {
 			officer.Init(GetDB(), 0)
 		}, func() {
-			violation.Init(GetDB())
+			violation.Init(GetDB(), "")
 		}, func() {
 			search.Init(GetDB())
 		}, func() {
@@ -82,7 +54,6 @@ func main() {
 				Children: []dec.Widget{
 					mainMenu(buttonNames, fNames),
 					dec.TextEdit{AssignTo: &inTE},
-					dec.TextEdit{AssignTo: &outTE, ReadOnly: true},
 				},
 			},
 		},
@@ -90,7 +61,6 @@ func main() {
 
 	// Or read from memory
 	// r, err := docx.ReadDocxFromMemory(data io.ReaderAt, size int64)
-	editDoc("./docs/a1.docx", "new_a1.docx", []string{"ΠΑΠΑΓΕΩΡΓΙΟΥ"}, []string{"ΠΑΠΑΓΕΩΡΓΙΟΥ2"})
 
 	db.Close()
 

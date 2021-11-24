@@ -7,6 +7,10 @@ import (
 	dec "github.com/lxn/walk/declarative"
 )
 
+type MyMainWindow struct {
+	*walk.MainWindow
+}
+
 var out [3]*walk.TextEdit
 
 func createFields(labels, names []string, officer *Officer) []dec.Widget {
@@ -48,10 +52,12 @@ func Init(db *sql.DB, commander int) {
 		title = "Αρμόδιος"
 	}
 	officer := GetByCommander(db, commander)
+	mw := new(MyMainWindow)
 	dec.MainWindow{
-		Title:  title,
-		Bounds: dec.Rectangle{Width: 800, Height: 200},
-		Layout: dec.VBox{},
+		Title:    title,
+		AssignTo: &mw.MainWindow,
+		Bounds:   dec.Rectangle{Width: 800, Height: 200},
+		Layout:   dec.VBox{},
 		Children: []dec.Widget{
 			dec.VSplitter{
 				Children: createFields(
@@ -70,9 +76,11 @@ func Init(db *sql.DB, commander int) {
 						Update(db, out[0].Text(), out[1].Text(), out[2].Text(), commander)
 					}
 					//Insert(db, out.Text(), out.Text(), out.Text(), commander)
+					mw.Close()
 				},
 				Font: dec.Font{PointSize: 12},
 			},
 		},
-	}.Run()
+	}.Create()
+	mw.Run()
 }

@@ -62,11 +62,11 @@ func basicGet(db *sql.DB, query string, arg interface{}) *Officer {
 }
 
 func GetByID(db *sql.DB, id int) *Officer {
-	return basicGet(db, "SELECT * FROM officer WHERE id = ? ", id)
+	return basicGet(db, "SELECT first_name, last_name, rank FROM officer WHERE id = ? ", id)
 }
 
 func GetByLastName(db *sql.DB, lastName string) *Officer {
-	return basicGet(db, "SELECT * FROM officer WHERE last_name = ? ", lastName)
+	return basicGet(db, "SELECT first_name, last_name, rank FROM officer WHERE last_name = ? ", lastName)
 }
 
 func GetByCommander(db *sql.DB, commander int) *Officer {

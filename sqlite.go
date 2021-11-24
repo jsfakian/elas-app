@@ -51,7 +51,7 @@ func createTable(tableDescription string) {
 
 func createTableOfficer() {
 	createOfficerTableSQL := `CREATE TABLE officer (
-		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,		
+		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,		
 		"first_name" VARCHAR,
 		"last_name" VARCHAR,
 		"rank" VARCHAR,
@@ -63,9 +63,16 @@ func createTableOfficer() {
 
 func createTableViolations() {
 	createViolationTableSQL := `CREATE TABLE violations (
-		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,		
-		"code" VARCHAR,
-		"name" VARCHAR		
+		"ap" VARCHAR NOT NULL PRIMARY KEY,
+		"at" VARCHAR,
+		"violation_number" INTEGER,
+		"first_name_driver" VARCHAR,
+		"last_name_driver" VARCHAR,
+		"registration_number" VARCHAR,
+		"first_name_owner" VARCHAR,
+		"middle_name_owner" VARCHAR,
+		"last_name_owner" VARCHAR,
+		"address_owner" VARCHAR	
 	  );` // SQL Statement for Create Table
 
 	createTable(createViolationTableSQL)
