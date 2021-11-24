@@ -37,6 +37,7 @@ func init() {
 func createTables() {
 	createTableViolations()
 	createTableOfficer()
+	createTableDecisions()
 }
 
 func createTable(tableDescription string) {
@@ -72,10 +73,23 @@ func createTableViolations() {
 		"first_name_owner" VARCHAR,
 		"middle_name_owner" VARCHAR,
 		"last_name_owner" VARCHAR,
-		"address_owner" VARCHAR	
+		"address_owner" VARCHAR,
+		"publish_date" VARCHAR,
+		"document_type" INTEGER
 	  );` // SQL Statement for Create Table
 
 	createTable(createViolationTableSQL)
+}
+
+func createTableDecisions() {
+	createDecisionTableSQL := `CREATE TABLE decisions (
+		"ap" VARCHAR NOT NULL PRIMARY KEY,
+		"violation_number" INTEGER,
+		"decision_date" VARCHAR,
+		"publish_date" VARCHAR
+	  );` // SQL Statement for Create Table
+
+	createTable(createDecisionTableSQL)
 }
 
 func GetDB() *sql.DB {

@@ -1,10 +1,11 @@
-package violation
+package docx
 
 import (
 	"bytes"
-	"log"
 	"os/exec"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // PowerShell struct
@@ -34,12 +35,16 @@ func (p *PowerShell) execute(args ...string) (stdOut string, stdErr string, err 
 	return
 }
 
-func openDocx(filename string) {
+func OpenDocx(filename string) {
 	posh := New()
 
-	cmd := `$Filename=` + filename + `
+	log.Info("Filename: ", filename)
+	cmd := `$Filename=` + strings.ReplaceAll(filename, "/", "\\") + `
 	$Word=NEW-Object –comobject Word.Application
-	$Document=$Word.documents.open($Filename)
+	$pids = Get-Process *Word* | Select-Object Handles, Id | sort-Object -Property Handles -Descending
+	$Document=$Word.Documents.openNoRepairDialog($Filename)
+	kill $pids[1].Id
+	Exit;
 	`
 
 	stdOut, stdErr, err := posh.execute(cmd)

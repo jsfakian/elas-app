@@ -2,6 +2,7 @@ package violation
 
 import (
 	"database/sql"
+	"elasapp/docx"
 	"elasapp/officer"
 	"os"
 	"path"
@@ -9,14 +10,12 @@ import (
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
-	"github.com/nguyenthenguyen/docx"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	out              [10]*walk.TextEdit
-	violType         *walk.ComboBox
-	selectedDocument int
+	out      [10]*walk.TextEdit
+	violType *walk.ComboBox
 )
 
 const (
@@ -40,22 +39,26 @@ func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 		{3, "e5 ΑΠΟΦΑΣΗ ΑΦΑΙΡ. ΣΕ Τ.Τ"},
 	}
 
-	fields := []dec.Widget{dec.HSplitter{
-		Children: []dec.Widget{
-			dec.TextLabel{
-				Text: "Τύπος παράβασης",
-				Font: dec.Font{PointSize: 12},
+	fields := []dec.Widget{
+		dec.HSplitter{
+			Children: []dec.Widget{
+				dec.TextLabel{
+					Text: "Τύπος παράβασης",
+					Font: dec.Font{PointSize: 12},
+				},
+				dec.ComboBox{
+					AssignTo:      &violType,
+					Value:         nil,    // Initial value if required
+					Model:         keys,   // The array of drop down items
+					DisplayMember: "Name", // The field to display "DropDownItem.Name"
+					BindingMember: "Key",  // The field to bind too, ie the value "DropDownItem.Key"
+					Font:          dec.Font{PointSize: 12},
+					CurrentIndex:  comboIndex,
+					Enabled:       comboIndex == -1,
+				},
 			},
-			dec.ComboBox{
-				AssignTo:      &violType,
-				Value:         nil,    // Initial value if required
-				Model:         keys,   // The array of drop down items
-				DisplayMember: "Name", // The field to display "DropDownItem.Name"
-				BindingMember: "Key",  // The field to bind too, ie the value "DropDownItem.Key"
-				Font:          dec.Font{PointSize: 12},
-				CurrentIndex:  comboIndex,
-			},
-		}}}
+		},
+	}
 	log.Info(names)
 
 	for i := range names {
@@ -71,6 +74,7 @@ func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 					Font:     dec.Font{PointSize: 12},
 					Text:     values[i],
 					AssignTo: &out[i],
+					ReadOnly: comboIndex != -1,
 				},
 			},
 		}
@@ -80,45 +84,17 @@ func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 	return fields
 }
 
-func editDoc(filein, fileout string, oldText, newText []string) bool {
-	log.Info(filein)
-	log.Info(fileout)
-	r, err := docx.ReadDocxFile(filein)
-	// Or read from memory
-	// r, err := docx.ReadDocxFromMemory(data io.ReaderAt, size int64)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
-
-	docx1 := r.Editable()
-
-	for i := range oldText {
-		log.Info(oldText[i], " || ", newText[i])
-		docx1.Replace(oldText[i], newText[i], -1)
-		//docx1.Replace("old_1_2", "new_1_2", -1)
-		//docx1.ReplaceLink("http://example.com/", "https://github.com/nguyenthenguyen/docx")
-		//docx1.ReplaceHeader("out with the old", "in with the new")
-		//docx1.ReplaceFooter("Change This Footer", "new footer")
-	}
-
-	docx1.WriteToFile(fileout)
-	r.Close()
-
-	return true
-}
-
 func createDoc(dirName string, db *sql.DB) {
 	err := os.Mkdir(path.Join(DocDir, dirName), 0755)
 	if err != nil {
-		openDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
+		docx.OpenDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
 		return
 	}
 
 	o := officer.GetByCommander(db, 0)
 	c := officer.GetByCommander(db, 1)
 
-	editDoc(path.Join(SampleDir, violType.Text()+".docx"), path.Join(DocDir, dirName, violType.Text()+".docx"),
+	docx.EditDoc(path.Join(SampleDir, violType.Text()+".docx"), path.Join(DocDir, dirName, violType.Text()+".docx"),
 		[]string{"Αρχ/κας ΓΙΑΝΝΑΚΑΚΗΣ Αντώνιος", "2515/5/1/1227-κθ", `Α'Α.Τ.ΗΡΑΚΛΕΙΟΥ
 		Αγίου Αρτεμίου 1 ΗΡΑΚΛΕΙΟ
 		Τ.Κ.: 71601`, "916100093367", "άγνωστο οδηγό", "ΗΚΚ-\n2892", "ΗΚΚ-2892", "ΛΕΝΤΕΡΗΣ ΓΕΩΡΓΙΟΣ πατρ. ΑΠ",
@@ -128,7 +104,7 @@ func createDoc(dirName string, db *sql.DB) {
 			out[5].Text(), out[6].Text() + " " + out[7].Text() + " πατρ. " + out[8].Text(), out[9].Text(),
 			c.FirstName + " " + c.LastName, c.Rank})
 
-	openDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
+	docx.OpenDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
 }
 
 func Init(db *sql.DB, ap string) {
@@ -145,7 +121,7 @@ func Init(db *sql.DB, ap string) {
 		button = dec.PushButton{
 			Text: "Προβολή",
 			OnClicked: func() {
-				UpdatePublishDate(db, ap, time.Now().String())
+				UpdatePublishDate(db, ap, time.Now().Format("02/01/2006"))
 				createDoc(out[2].Text(), db)
 			},
 			Font: dec.Font{PointSize: 12},

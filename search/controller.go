@@ -15,11 +15,10 @@ import (
 var mydb *sql.DB
 
 type searchViolation struct {
-	index      int
-	viol       *violation.Violation
-	objection  bool
-	objection2 bool
-	checked    bool
+	index     int
+	viol      *violation.Violation
+	objection bool
+	checked   bool
 }
 
 type violationArray struct {
@@ -62,7 +61,7 @@ func (m *violationArray) Value(row, col int) interface{} {
 			return "Όχι"
 		}
 	case 5:
-		if item.objection2 {
+		if item.checked {
 			return "Ναι"
 		} else {
 			return "Όχι"
@@ -81,12 +80,15 @@ func (m *violationArray) Checked(row int) bool {
 
 // Called by the TableView when the user toggled the check box of a given row.
 func (m *violationArray) SetChecked(row int, checked bool) error {
-	if m.items[row].objection && m.items[row].objection2 {
-		m.items[row].checked = true
+	if m.items[row].checked {
 		return nil
 	}
-	m.items[row].checked = false
-	decision.Init(mydb)
+
+	decision.Init(mydb, m.items[row].viol.ViolationNumber)
+	decisions := decision.GetByViolationNumber(mydb, m.items[row].viol.ViolationNumber)
+	if len(decisions) == 2 {
+		m.items[row].checked = true
+	}
 	return nil
 }
 
@@ -130,12 +132,12 @@ func (m *violationArray) CreateRows(db *sql.DB) {
 	violations := violation.GetByAll(db)
 
 	for i, viol := range violations {
+		decisions := decision.GetByViolationNumber(db, viol.ViolationNumber)
 		sv := new(searchViolation)
 		sv.index = i + 1
 		sv.viol = viol
-		sv.objection = false
-		sv.objection2 = false
-		sv.checked = false
+		sv.objection = len(decisions) > 0
+		sv.checked = len(decisions) == 2
 		m.items = append(m.items, sv)
 	}
 
@@ -148,7 +150,7 @@ func Init(db *sql.DB) {
 	var tv *walk.TableView
 	mydb = db
 
-	APBitmap, err := walk.NewBitmap(walk.Size{100, 1})
+	APBitmap, err := walk.NewBitmapForDPI(walk.Size{Width: 100, Height: 1}, 300)
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +162,8 @@ func Init(db *sql.DB) {
 	}
 	defer APBitmap.Dispose()
 
-	canvas.GradientFillRectangle(walk.RGB(255, 0, 0), walk.RGB(0, 255, 0), walk.Horizontal, walk.Rectangle{0, 0, 100, 1})
+	canvas.GradientFillRectanglePixels(walk.RGB(255, 0, 0), walk.RGB(0, 255, 0), walk.Horizontal,
+		walk.Rectangle{X: 0, Y: 0, Width: 100, Height: 1})
 
 	canvas.Dispose()
 
