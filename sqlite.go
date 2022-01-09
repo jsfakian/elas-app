@@ -38,6 +38,7 @@ func createTables() {
 	createTableViolations()
 	createTableOfficer()
 	createTableDecisions()
+	createTableObjections()
 }
 
 func createTable(tableDescription string) {
@@ -67,14 +68,11 @@ func createTableViolations() {
 		"ap" VARCHAR NOT NULL PRIMARY KEY,
 		"at" VARCHAR,
 		"violation_number" INTEGER,
-		"first_name_driver" VARCHAR,
-		"last_name_driver" VARCHAR,
 		"registration_number" VARCHAR,
 		"first_name_owner" VARCHAR,
 		"middle_name_owner" VARCHAR,
 		"last_name_owner" VARCHAR,
 		"address_owner" VARCHAR,
-		"publish_date" VARCHAR,
 		"document_type" INTEGER
 	  );` // SQL Statement for Create Table
 
@@ -85,11 +83,24 @@ func createTableDecisions() {
 	createDecisionTableSQL := `CREATE TABLE decisions (
 		"ap" VARCHAR NOT NULL PRIMARY KEY,
 		"violation_number" INTEGER,
-		"decision_date" VARCHAR,
 		"publish_date" VARCHAR
 	  );` // SQL Statement for Create Table
 
 	createTable(createDecisionTableSQL)
+}
+
+func createTableObjections() {
+	createObjectionTableSQL := `CREATE TABLE objections (
+		"ap" VARCHAR NOT NULL PRIMARY KEY,
+		"violation_number" INTEGER,
+		"first_name_driver" VARCHAR,
+		"last_name_driver" VARCHAR,
+		"middle_name_driver" VARCHAR,
+		"objection_date" VARCHAR,
+		"publish_date" VARCHAR
+	  );` // SQL Statement for Create Table
+
+	createTable(createObjectionTableSQL)
 }
 
 func GetDB() *sql.DB {

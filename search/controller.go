@@ -84,7 +84,7 @@ func (m *violationArray) SetChecked(row int, checked bool) error {
 		return nil
 	}
 
-	decision.Init(mydb, m.items[row].viol.ViolationNumber)
+	decision.Init(mydb, m.items[row].viol.AP, m.items[row].viol.ViolationNumber)
 	decisions := decision.GetByViolationNumber(mydb, m.items[row].viol.ViolationNumber)
 	if len(decisions) == 2 {
 		m.items[row].checked = true
@@ -108,6 +108,7 @@ func (m *violationArray) Sort(col int, order walk.SortOrder) error {
 
 		switch m.sortColumn {
 		case 0:
+			return c(a.index < b.index)
 		case 4:
 		case 5:
 			return c(a.index < b.index)
@@ -118,6 +119,8 @@ func (m *violationArray) Sort(col int, order walk.SortOrder) error {
 		case 3:
 			return c(strings.Compare(a.viol.RegistrationNumber, b.viol.RegistrationNumber) == -1)
 		}
+
+		log.Info("Column: ", m.sortColumn)
 
 		panic("unreachable")
 	})
@@ -193,8 +196,8 @@ func Init(db *sql.DB) {
 							{Title: "Πρωτόκολλο", Width: 160},
 							{Title: "Παράβαση", Width: 130},
 							{Title: "Αριθμός κυκλοφορίας", Width: 170},
-							{Title: "Απόφαση Ένστασης", Width: 160},
-							{Title: "Απόφαση Ένστασης (2)", Width: 180},
+							{Title: "Απόφαση", Width: 160},
+							{Title: "Ένσταση", Width: 180},
 						},
 						StyleCell: func(style *walk.CellStyle) {
 							item := model.items[style.Row()]

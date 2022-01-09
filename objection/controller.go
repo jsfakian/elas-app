@@ -1,4 +1,4 @@
-package decision
+package objection
 
 import (
 	"database/sql"
@@ -14,7 +14,7 @@ import (
 )
 
 var out [10]*walk.TextEdit
-var decisionType *walk.ComboBox
+var objectionType *walk.ComboBox
 
 const (
 	SampleDir string = "samples/apofasi"
@@ -32,11 +32,14 @@ type DropDownItem struct { // Used in the ComboBox dropdown
 
 func createFields(labels, names, values []string) []dec.Widget {
 	keys := []*DropDownItem{ // These are the items to populate the drop down list
-		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΓΙΑ  ΠΡΟΣΤΙΜΑ 20 ΚΑΙ 50 ΕΥΡΩ"},
-		{2, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 ( ΑΦΟΡΑ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ 'Η Α.Τ. Γ.Α.Δ.Α. Κ΄ Γ.Α.Δ.Θ.) ΑΦΑΙΡΕΣΗ ΑΠΟ ΥΠΗΡΕΣΙΑ ΑΠΟΣΤΟΛΗΣ"},
-		{3, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 (ΑΦΟΡΑ ΜΗ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ) ΕΚΔΟΣΗ ΑΠΟΦΑΣΗΣ 1 ΑΠΟ Τ.Τ ΠΕΡΙΟΧΗΣ"},
+		{1, "ΑΠΟΦΑΣΗ_ΑΠΟΡΡΙΨΗ_ΚΛΗΣΗΣ"},
+		{2, "ΑΠΟΦΑΣΗ_ΑΠΟΡΡΙΨΗ_ΛΟΓΩ_ΕΚΠΡΟΘΕΣΜΩΝ_ΑΝΤΙΡΡΗΣΕΩΝ"},
+		{3, "ΑΠΟΦΑΣΗ_ΑΠΟΡΡΙΨΗΣ_ΓΙΑ_POINT_SYSTEM"},
+		{4, "ΑΠΟΦΑΣΗ_ΑΠΟΡΡΙΨΗΣ_ΓΙΑ_ΑΟ"},
+		{5, "ΑΠΟΦΑΣΗ_ΑΠΟΡΡΙΨΗΣ_ΓΙΑ_ΙΑΤΡΙΚΟΥΣ_ΛΟΓΟΥΣ"},
+		{6, "ΑΠΟΦΑΣΗ_ΔΕΚΤΗ_ΓΙΑ_ΑΟ"},
+		{7, "ΑΠΟΦΑΣΗ_ΔΕΚΤΗ_ΓΙΑ_ΚΛΗΣΗ"},
 	}
-
 	fields := []dec.Widget{dec.HSplitter{
 		Children: []dec.Widget{
 			dec.TextLabel{
@@ -44,7 +47,7 @@ func createFields(labels, names, values []string) []dec.Widget {
 				Font: dec.Font{PointSize: 12},
 			},
 			dec.ComboBox{
-				AssignTo:      &decisionType,
+				AssignTo:      &objectionType,
 				Value:         nil,    // Initial value if required
 				Model:         keys,   // The array of drop down items
 				DisplayMember: "Name", // The field to display "DropDownItem.Name"
@@ -78,29 +81,27 @@ func createFields(labels, names, values []string) []dec.Widget {
 }
 
 func createDoc(dirName string, db *sql.DB) {
-	o := officer.GetByCommander(db, 0)
 	c := officer.GetByCommander(db, 1)
 
 	viol := violation.GetByViolationNumber(db, out[1].Text())
 
-	docx.EditDoc(path.Join(SampleDir, decisionType.Text()+".docx"), path.Join(DocDir, dirName, decisionType.Text()+".docx"),
-		[]string{"<armodios>", "<protokolo>", "<arithmos_paravasis>", "<imnia_ekdosis>", "<epitheto_idioktiti>",
-			"<onoma_idioktiti>", "<patronimo_idioktiti>", "<dieuthunsi_idioktiti>", "<diikitis>"},
-		[]string{o.Rank + " " + o.LastName + " " + o.FirstName, viol.AP, viol.ViolationNumber,
-			time.Now().Format("02/01/2006"), viol.LastNameOwner, viol.FirstNameOwner, viol.MiddleNameOwner,
+	docx.EditDoc(path.Join(SampleDir, objectionType.Text()+".docx"), path.Join(DocDir, dirName, objectionType.Text()+".docx"),
+		[]string{"<protokolo>", "<imnia_ekdosis>", "<imnia_enstansis>", "<odigos>", "<patronimo_odigou>",
+			"<arithmos_paravasis>", "<diikitis>"},
+		[]string{out[0].Text(), out[5].Text(), out[3].Text() + " " + out[2].Text(), out[4].Text(), viol.ViolationNumber,
 			c.FirstName + " " + c.LastName + " " + c.Rank})
 
-	docx.OpenDocx(path.Join(DocDir, dirName, decisionType.Text()+".docx"))
+	docx.OpenDocx(path.Join(DocDir, dirName, objectionType.Text()+".docx"))
 
 }
 
-func Init(db *sql.DB, ap, violationNumber string) {
-	values := []string{ap, violationNumber, time.Now().Format("02/01/2006")}
+func Init(db *sql.DB, violationNumber string) {
+	values := []string{"", violationNumber, "", "", "", time.Now().Format("02/01/2006")}
 	mw := new(MyMainWindow)
 	dec.MainWindow{
-		Title:    "Καταχώρηση Απόφασης",
+		Title:    "Καταχώρηση Παράβασης",
 		AssignTo: &mw.MainWindow,
-		Bounds:   dec.Rectangle{Width: 900, Height: 300},
+		Bounds:   dec.Rectangle{Width: 900, Height: 200},
 		Layout:   dec.VBox{},
 		Children: []dec.Widget{
 			dec.VSplitter{
@@ -108,12 +109,20 @@ func Init(db *sql.DB, ap, violationNumber string) {
 					[]string{
 						"Αριθμός πρωτοκόλλου",
 						"Αριθμός παράβασης",
-						"Ημ/νια απόφασης",
+						"Όνομα οδηγού",
+						"Επίθετο οδηγού",
+						"Πατρόνυμο οδηγού",
+						"Ημ/νια ένστασης",
+						"Ημ/νια έκδοσης",
 					},
 					[]string{
 						"ap",
 						"violationNumber",
-						"DecisionDate",
+						"firstNameDriver",
+						"lastNameDriver",
+						"middleNameDriver",
+						"objectionDate",
+						"publishDate",
 					},
 					values,
 				),
@@ -121,7 +130,8 @@ func Init(db *sql.DB, ap, violationNumber string) {
 			dec.PushButton{
 				Text: "Αποθήκευση",
 				OnClicked: func() {
-					Insert(db, out[0].Text(), out[1].Text(), out[2].Text())
+					Insert(db, out[0].Text(), out[1].Text(), out[2].Text(), out[3].Text(), out[4].Text(), out[5].Text(),
+						out[6].Text())
 					createDoc(out[1].Text(), db)
 					mw.Close()
 				},

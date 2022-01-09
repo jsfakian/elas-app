@@ -2,10 +2,6 @@ package violation
 
 import (
 	"database/sql"
-	"elasapp/docx"
-	"elasapp/officer"
-	"os"
-	"path"
 	"time"
 
 	"github.com/lxn/walk"
@@ -14,7 +10,7 @@ import (
 )
 
 var (
-	out      [10]*walk.TextEdit
+	out      [8]*walk.TextEdit
 	violType *walk.ComboBox
 )
 
@@ -34,9 +30,9 @@ type DropDownItem struct { // Used in the ComboBox dropdown
 
 func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 	keys := []*DropDownItem{ // These are the items to populate the drop down list
-		{1, "e1_40_ΜΟΝΟ_ΠΡΟΣΤΙΜΟ"},
-		{2, "e3_ΠΡΟΣΤΙΜΟ_ΚΑΙ_ΑΦΑΙΡ.ΣΕ_ΜΙΚΤΑ"},
-		{3, "e5 ΑΠΟΦΑΣΗ ΑΦΑΙΡ. ΣΕ Τ.Τ"},
+		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΓΙΑ  ΠΡΟΣΤΙΜΑ 20 ΚΑΙ 50 ΕΥΡΩ"},
+		{2, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 ( ΑΦΟΡΑ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ 'Η Α.Τ. Γ.Α.Δ.Α. Κ΄ Γ.Α.Δ.Θ.) ΑΦΑΙΡΕΣΗ ΑΠΟ ΥΠΗΡΕΣΙΑ ΑΠΟΣΤΟΛΗΣ"},
+		{3, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 (ΑΦΟΡΑ ΜΗ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ) ΕΚΔΟΣΗ ΑΠΟΦΑΣΗΣ 1 ΑΠΟ Τ.Τ ΠΕΡΙΟΧΗΣ"},
 	}
 
 	fields := []dec.Widget{
@@ -84,45 +80,21 @@ func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 	return fields
 }
 
-func createDoc(dirName string, db *sql.DB) {
-	err := os.Mkdir(path.Join(DocDir, dirName), 0755)
-	if err != nil {
-		docx.OpenDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
-		return
-	}
-
-	o := officer.GetByCommander(db, 0)
-	c := officer.GetByCommander(db, 1)
-
-	docx.EditDoc(path.Join(SampleDir, violType.Text()+".docx"), path.Join(DocDir, dirName, violType.Text()+".docx"),
-		[]string{"Αρχ/κας ΓΙΑΝΝΑΚΑΚΗΣ Αντώνιος", "2515/5/1/1227-κθ", `Α'Α.Τ.ΗΡΑΚΛΕΙΟΥ
-		Αγίου Αρτεμίου 1 ΗΡΑΚΛΕΙΟ
-		Τ.Κ.: 71601`, "916100093367", "άγνωστο οδηγό", "ΗΚΚ-\n2892", "ΗΚΚ-2892", "ΛΕΝΤΕΡΗΣ ΓΕΩΡΓΙΟΣ πατρ. ΑΠ",
-			"ΚΑΤΑΥΛΙΣΜΟΣ ΑΛΙΚΑΡΝΑΣΣΟΥ ΗΡΑΚΛΕΙΟ ΤΚ: 71601", "Εμμανουήλ ΤΑΜΠΑΚΑΚΗΣ", "Υπαστυνόμος Β΄"},
-		[]string{o.Rank + " " + o.LastName + " " + o.FirstName,
-			out[0].Text(), out[1].Text(), out[2].Text(), out[3].Text() + " " + out[4].Text(), out[5].Text(),
-			out[5].Text(), out[6].Text() + " " + out[7].Text() + " πατρ. " + out[8].Text(), out[9].Text(),
-			c.FirstName + " " + c.LastName, c.Rank})
-
-	docx.OpenDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
-}
-
 func Init(db *sql.DB, ap string) {
-	values := []string{"", "", "", "", "", "", "", "", "", "", ""}
+	values := []string{"", "", "", "", "", "", "", "", ""}
 	comboIndex := -1
 	var button dec.PushButton
 	mw := new(MyMainWindow)
 
 	if ap != "" {
 		viol := GetByAP(db, ap)
-		values = []string{viol.AP, viol.AT, viol.ViolationNumber, viol.FirstNameDriver, viol.LastNameDriver,
+		values = []string{viol.AP, viol.AT, viol.ViolationNumber,
 			viol.RegistrationNumber, viol.FirstNameOwner, viol.LastNameOwner, viol.MiddleNameOwner, viol.AddressOwner}
 		comboIndex = viol.DocumentType
 		button = dec.PushButton{
 			Text: "Προβολή",
 			OnClicked: func() {
 				UpdatePublishDate(db, ap, time.Now().Format("02/01/2006"))
-				createDoc(out[2].Text(), db)
 			},
 			Font: dec.Font{PointSize: 12},
 		}
@@ -131,7 +103,7 @@ func Init(db *sql.DB, ap string) {
 			Text: "Αποθήκευση",
 			OnClicked: func() {
 				Insert(db, out[0].Text(), out[1].Text(), out[2].Text(), out[3].Text(), out[4].Text(), out[5].Text(),
-					out[6].Text(), out[7].Text(), out[8].Text(), out[9].Text(), violType.CurrentIndex()+1)
+					out[6].Text(), out[7].Text(), violType.CurrentIndex()+1)
 				mw.Close()
 			},
 			Font: dec.Font{PointSize: 12},
@@ -150,8 +122,6 @@ func Init(db *sql.DB, ap string) {
 						"Αριθμός Πρωτοκόλλου",
 						"Διεύθυνση Α.Τ.",
 						"Αριθμός παράβασης",
-						"Όνομα οδηγού",
-						"Επώνυμο οδηγού",
 						"Αριθμός κυκλοφορίας",
 						"Όνομα ιδιοκτήτη",
 						"Επώνυμο ιδιοκτήτη",
@@ -162,8 +132,6 @@ func Init(db *sql.DB, ap string) {
 						"ap",
 						"at",
 						"violationNumber",
-						"firstNameDriver",
-						"lastNameDriver",
 						"registrationNumber",
 						"firstNameOwner",
 						"lastNameOwner",
