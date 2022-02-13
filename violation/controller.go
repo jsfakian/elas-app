@@ -89,11 +89,11 @@ func createDoc(dirName string, db *sql.DB) {
 	viol := GetByViolationNumber(db, out[2].Text())
 
 	docx.EditDoc(path.Join(SampleDir, violType.Text()+".docx"), path.Join(DocDir, dirName, violType.Text()+".docx"),
-		[]string{"armodios", "protokolo", "att", "imniaekdosis", "epithetoidioktiti", "onomaidioktiti",
+		[]string{"armodios", "protokolo", "at", "paravasi", "imnia", "epithetoidioktiti", "onomaidioktiti",
 			"patronimoidioktiti", "dieuthunsiidioktiti", "arithmoskykloforias", "diikitis"},
-		[]string{o.FirstName + " " + o.LastName + " " + o.Rank, viol.AP, viol.AT, viol.PublishDate, viol.LastNameOwner,
-			viol.FirstNameOwner, viol.MiddleNameOwner, viol.AddressOwner, viol.RegistrationNumber,
-			c.FirstName + " " + c.LastName + " " + c.Rank})
+		[]string{o.FirstName + " " + o.LastName + " " + o.Rank, viol.AP, viol.AT, viol.ViolationNumber,
+			viol.PublishDate, viol.LastNameOwner, viol.FirstNameOwner, viol.MiddleNameOwner, viol.AddressOwner,
+			viol.RegistrationNumber, c.FirstName + " " + c.LastName + " " + c.Rank})
 
 	docx.OpenDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
 }
