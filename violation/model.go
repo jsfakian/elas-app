@@ -16,6 +16,7 @@ type Violation struct {
 	MiddleNameOwner    string `json:"middle_name_owner"`
 	LastNameOwner      string `json:"last_name_owner"`
 	AddressOwner       string `json:"address_owner"`
+	PublishDate        string `json:"publish_date"`
 	DocumentType       int    `json:"document_type"`
 }
 
@@ -24,8 +25,8 @@ func Insert(db *sql.DB, ap, at, violationNumber, registrationNumber, firstNameOw
 	lastNameOwner, middleNameOwner, addressOwner string, documentType int) {
 	log.Println("Inserting violation record ...")
 	insertViolationSQL := `INSERT INTO violations(ap, at, violation_number,
-		registration_number, first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		registration_number, first_name_owner, middle_name_owner, last_name_owner, address_owner, publish_date, document_type) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	statement, err := db.Prepare(insertViolationSQL) // Prepare statement. This is good to avoid SQL injections
 	if err != nil {
 		log.Error(err)
@@ -63,7 +64,7 @@ func basicGet(db *sql.DB, query string, arg ...interface{}) []*Violation {
 		violation := new(Violation)
 		err = row.Scan(&violation.AP, &violation.AT, &violation.ViolationNumber, &violation.RegistrationNumber,
 			&violation.FirstNameOwner, &violation.MiddleNameOwner, &violation.LastNameOwner, &violation.AddressOwner,
-			&violation.DocumentType)
+			&violation.PublishDate, &violation.DocumentType)
 		if err != nil {
 			log.Error("Failed scanning: ", err)
 		}
@@ -76,30 +77,40 @@ func basicGet(db *sql.DB, query string, arg ...interface{}) []*Violation {
 
 func GetByAll(db *sql.DB) []*Violation {
 	return basicGet(db, `SELECT ap, at, violation_number, registration_number, 
-	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations`)
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, publish_date, document_type FROM violations`)
 }
 
 func GetByAP(db *sql.DB, ap string) *Violation {
 	log.Info("ap: ", ap)
-	return basicGet(db, `SELECT ap, at, violation_number, registration_number, 
-	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
-	WHERE ap like ? `, ap)[0]
+	viols := basicGet(db, `SELECT ap, at, violation_number, registration_number, 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, publish_date, document_type FROM violations 
+	WHERE ap like ? `, ap)
+	if len(viols) != 0 {
+		return viols[0]
+	} else {
+		return &Violation{}
+	}
 }
 
 func GetByViolationNumber(db *sql.DB, violationNumber string) *Violation {
-	return basicGet(db, `SELECT ap, at, violation_number, registration_number, 
-	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
-	WHERE violation_number like ? `, violationNumber)[0]
+	viols := basicGet(db, `SELECT ap, at, violation_number, registration_number, 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, publish_date, document_type FROM violations 
+	WHERE violation_number like ? `, violationNumber)
+	if len(viols) != 0 {
+		return viols[0]
+	} else {
+		return &Violation{}
+	}
 }
 
 func GetByDriver(db *sql.DB, firstName, lastName string) []*Violation {
 	return basicGet(db, `SELECT ap, at, violation_number, registration_number, 
-	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, publish_date, document_type FROM violations 
 	WHERE first_name_driver like ? and last_name_driver like ?`, firstName, lastName)
 }
 
 func GetByOwner(db *sql.DB, firstName, lastName string) []*Violation {
 	return basicGet(db, `SELECT ap, at, violation_number, registration_number, 
-	first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type FROM violations 
+	first_name_owner, middle_name_owner, last_name_owner, address_owner, publish_date, document_type FROM violations 
 	WHERE first_name_owner like ? and last_name_owner like ?`, firstName, lastName)
 }

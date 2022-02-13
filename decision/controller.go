@@ -30,9 +30,9 @@ type DropDownItem struct { // Used in the ComboBox dropdown
 	Name string
 }
 
-func createFields(labels, names, values []string) []dec.Widget {
+func createFields(labels, names, values []string, documentType int) []dec.Widget {
 	keys := []*DropDownItem{ // These are the items to populate the drop down list
-		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΓΙΑ  ΠΡΟΣΤΙΜΑ 20 ΚΑΙ 50 ΕΥΡΩ"},
+		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΓΙΑ ΠΡΟΣΤΙΜΑ 20 ΚΑΙ 50 ΕΥΡΩ"},
 		{2, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 ( ΑΦΟΡΑ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ 'Η Α.Τ. Γ.Α.Δ.Α. Κ΄ Γ.Α.Δ.Θ.) ΑΦΑΙΡΕΣΗ ΑΠΟ ΥΠΗΡΕΣΙΑ ΑΠΟΣΤΟΛΗΣ"},
 		{3, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 (ΑΦΟΡΑ ΜΗ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ) ΕΚΔΟΣΗ ΑΠΟΦΑΣΗΣ 1 ΑΠΟ Τ.Τ ΠΕΡΙΟΧΗΣ"},
 	}
@@ -45,10 +45,11 @@ func createFields(labels, names, values []string) []dec.Widget {
 			},
 			dec.ComboBox{
 				AssignTo:      &decisionType,
-				Value:         nil,    // Initial value if required
-				Model:         keys,   // The array of drop down items
-				DisplayMember: "Name", // The field to display "DropDownItem.Name"
-				BindingMember: "Key",  // The field to bind too, ie the value "DropDownItem.Key"
+				Value:         documentType, // Initial value if required
+				Model:         keys,         // The array of drop down items
+				DisplayMember: "Name",       // The field to display "DropDownItem.Name"
+				BindingMember: "Key",        // The field to bind too, ie the value "DropDownItem.Key"
+				Enabled:       false,
 				Font:          dec.Font{PointSize: 12},
 			},
 		}}}
@@ -95,12 +96,13 @@ func createDoc(dirName string, db *sql.DB) {
 }
 
 func Init(db *sql.DB, ap, violationNumber string) {
+	viol := violation.GetByViolationNumber(db, violationNumber)
 	values := []string{ap, violationNumber, time.Now().Format("02/01/2006")}
 	mw := new(MyMainWindow)
 	dec.MainWindow{
 		Title:    "Καταχώρηση Απόφασης",
 		AssignTo: &mw.MainWindow,
-		Bounds:   dec.Rectangle{Width: 900, Height: 300},
+		Bounds:   dec.Rectangle{Width: 900, Height: 200},
 		Layout:   dec.VBox{},
 		Children: []dec.Widget{
 			dec.VSplitter{
@@ -116,6 +118,7 @@ func Init(db *sql.DB, ap, violationNumber string) {
 						"DecisionDate",
 					},
 					values,
+					viol.DocumentType,
 				),
 			},
 			dec.PushButton{

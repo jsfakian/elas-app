@@ -2,6 +2,9 @@ package violation
 
 import (
 	"database/sql"
+	"elasapp/docx"
+	"elasapp/officer"
+	"path"
 	"time"
 
 	"github.com/lxn/walk"
@@ -30,9 +33,9 @@ type DropDownItem struct { // Used in the ComboBox dropdown
 
 func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 	keys := []*DropDownItem{ // These are the items to populate the drop down list
-		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΓΙΑ  ΠΡΟΣΤΙΜΑ 20 ΚΑΙ 50 ΕΥΡΩ"},
-		{2, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 ( ΑΦΟΡΑ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ 'Η Α.Τ. Γ.Α.Δ.Α. Κ΄ Γ.Α.Δ.Θ.) ΑΦΑΙΡΕΣΗ ΑΠΟ ΥΠΗΡΕΣΙΑ ΑΠΟΣΤΟΛΗΣ"},
-		{3, "ΔΙΑΒΙΒΑΣΤΙΚΟ ΠΡΟΣΤΙΜΟ 175 (ΑΦΟΡΑ ΜΗ ΜΕΙΚΤΗ ΥΠΗΡΕΣΙΑ) ΕΚΔΟΣΗ ΑΠΟΦΑΣΗΣ 1 ΑΠΟ Τ.Τ ΠΕΡΙΟΧΗΣ"},
+		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΓΙΑ_ΠΡΟΣΤΙΜΑ_20_ΚΑΙ_50_ΕΥΡΩ"},
+		{2, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΠΡΟΣΤΙΜΟ_175_(ΑΦΟΡΑ_ΜΕΙΚΤΗ_ΥΠΗΡΕΣΙΑ_'Η_Α.Τ.Γ.Α.Δ.Α._Κ΄_Γ.Α.Δ.Θ.)_ΑΦΑΙΡΕΣΗ_ΑΠΟ_ΥΠΗΡΕΣΙΑ_ΑΠΟΣΤΟΛΗΣ"},
+		{3, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΠΡΟΣΤΙΜΟ_175_(ΑΦΟΡΑ_ΜΗ_ΜΕΙΚΤΗ_ΥΠΗΡΕΣΙΑ)_ΕΚΔΟΣΗ_ΑΠΟΦΑΣΗΣ_1_ΑΠΟ_Τ.Τ_ΠΕΡΙΟΧΗΣ"},
 	}
 
 	fields := []dec.Widget{
@@ -80,26 +83,78 @@ func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 	return fields
 }
 
+func createDoc(dirName string, db *sql.DB) {
+	c := officer.GetByCommander(db, 1)
+	o := officer.GetByCommander(db, 0)
+	viol := GetByViolationNumber(db, out[2].Text())
+
+	docx.EditDoc(path.Join(SampleDir, violType.Text()+".docx"), path.Join(DocDir, dirName, violType.Text()+".docx"),
+		[]string{"armodios", "protokolo", "att", "imniaekdosis", "epithetoidioktiti", "onomaidioktiti",
+			"patronimoidioktiti", "dieuthunsiidioktiti", "arithmoskykloforias", "diikitis"},
+		[]string{o.FirstName + " " + o.LastName + " " + o.Rank, viol.AP, viol.AT, viol.PublishDate, viol.LastNameOwner,
+			viol.FirstNameOwner, viol.MiddleNameOwner, viol.AddressOwner, viol.RegistrationNumber,
+			c.FirstName + " " + c.LastName + " " + c.Rank})
+
+	docx.OpenDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
+}
+
 func Init(db *sql.DB, ap string) {
-	values := []string{"", "", "", "", "", "", "", "", ""}
 	comboIndex := -1
-	var button dec.PushButton
+	viol := GetByAP(db, ap)
+	values := []string{
+		viol.AP,
+		viol.AT,
+		viol.ViolationNumber,
+		viol.RegistrationNumber,
+		viol.FirstNameOwner,
+		viol.LastNameOwner,
+		viol.MiddleNameOwner,
+		viol.AddressOwner,
+	}
+
+	comboIndex = viol.DocumentType
+	children := []dec.Widget{
+		dec.VSplitter{
+			Children: createFields(
+				[]string{
+					"Αριθμός Πρωτοκόλλου",
+					"Διεύθυνση Α.Τ.",
+					"Αριθμός παράβασης",
+					"Αριθμός κυκλοφορίας",
+					"Όνομα ιδιοκτήτη",
+					"Επώνυμο ιδιοκτήτη",
+					"Πατρώνυμο ιδιοκτήτη",
+					"Διεύθυνση ιδιοκτήτη",
+				},
+				[]string{
+					"ap",
+					"at",
+					"violationNumber",
+					"registrationNumber",
+					"firstNameOwner",
+					"lastNameOwner",
+					"middleNameOwner",
+					"addressOwner",
+				},
+				values,
+				comboIndex,
+			),
+		},
+	}
 	mw := new(MyMainWindow)
 
 	if ap != "" {
-		viol := GetByAP(db, ap)
-		values = []string{viol.AP, viol.AT, viol.ViolationNumber,
-			viol.RegistrationNumber, viol.FirstNameOwner, viol.LastNameOwner, viol.MiddleNameOwner, viol.AddressOwner}
-		comboIndex = viol.DocumentType
-		button = dec.PushButton{
+		button := dec.PushButton{
 			Text: "Προβολή",
 			OnClicked: func() {
 				UpdatePublishDate(db, ap, time.Now().Format("02/01/2006"))
+				createDoc(out[2].Text(), db)
 			},
 			Font: dec.Font{PointSize: 12},
 		}
+		children = append(children, button)
 	} else {
-		button = dec.PushButton{
+		button := dec.PushButton{
 			Text: "Αποθήκευση",
 			OnClicked: func() {
 				Insert(db, out[0].Text(), out[1].Text(), out[2].Text(), out[3].Text(), out[4].Text(), out[5].Text(),
@@ -108,6 +163,7 @@ func Init(db *sql.DB, ap string) {
 			},
 			Font: dec.Font{PointSize: 12},
 		}
+		children = append(children, button)
 	}
 
 	dec.MainWindow{
@@ -115,35 +171,7 @@ func Init(db *sql.DB, ap string) {
 		AssignTo: &mw.MainWindow,
 		Bounds:   dec.Rectangle{Width: 1200, Height: 300},
 		Layout:   dec.VBox{},
-		Children: []dec.Widget{
-			dec.VSplitter{
-				Children: createFields(
-					[]string{
-						"Αριθμός Πρωτοκόλλου",
-						"Διεύθυνση Α.Τ.",
-						"Αριθμός παράβασης",
-						"Αριθμός κυκλοφορίας",
-						"Όνομα ιδιοκτήτη",
-						"Επώνυμο ιδιοκτήτη",
-						"Πατρώνυμο ιδιοκτήτη",
-						"Διεύθυνση ιδιοκτήτη",
-					},
-					[]string{
-						"ap",
-						"at",
-						"violationNumber",
-						"registrationNumber",
-						"firstNameOwner",
-						"lastNameOwner",
-						"middleNameOwner",
-						"addressOwner",
-					},
-					values,
-					comboIndex,
-				),
-			},
-			button,
-		},
+		Children: children,
 	}.Create()
 	mw.Run()
 }

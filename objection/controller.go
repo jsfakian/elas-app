@@ -6,7 +6,6 @@ import (
 	"elasapp/officer"
 	"elasapp/violation"
 	"path"
-	"time"
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
@@ -15,6 +14,7 @@ import (
 
 var out [10]*walk.TextEdit
 var objectionType *walk.ComboBox
+var genderDriver *walk.ComboBox
 
 const (
 	SampleDir string = "samples/apofasi"
@@ -30,7 +30,7 @@ type DropDownItem struct { // Used in the ComboBox dropdown
 	Name string
 }
 
-func createFields(labels, names, values []string) []dec.Widget {
+func createFields(labels, names, values []string, gender string, documentType int) []dec.Widget {
 	keys := []*DropDownItem{ // These are the items to populate the drop down list
 		{1, "ΑΠΟΦΑΣΗ_ΑΠΟΡΡΙΨΗ_ΚΛΗΣΗΣ"},
 		{2, "ΑΠΟΦΑΣΗ_ΑΠΟΡΡΙΨΗ_ΛΟΓΩ_ΕΚΠΡΟΘΕΣΜΩΝ_ΑΝΤΙΡΡΗΣΕΩΝ"},
@@ -40,6 +40,10 @@ func createFields(labels, names, values []string) []dec.Widget {
 		{6, "ΑΠΟΦΑΣΗ_ΔΕΚΤΗ_ΓΙΑ_ΑΟ"},
 		{7, "ΑΠΟΦΑΣΗ_ΔΕΚΤΗ_ΓΙΑ_ΚΛΗΣΗ"},
 	}
+	genderKeys := []*DropDownItem{
+		{1, "Αρσενικό"},
+		{2, "Θηλυκό"},
+	}
 	fields := []dec.Widget{dec.HSplitter{
 		Children: []dec.Widget{
 			dec.TextLabel{
@@ -48,33 +52,57 @@ func createFields(labels, names, values []string) []dec.Widget {
 			},
 			dec.ComboBox{
 				AssignTo:      &objectionType,
-				Value:         nil,    // Initial value if required
-				Model:         keys,   // The array of drop down items
-				DisplayMember: "Name", // The field to display "DropDownItem.Name"
-				BindingMember: "Key",  // The field to bind too, ie the value "DropDownItem.Key"
+				Value:         documentType, // Initial value if required
+				Model:         keys,         // The array of drop down items
+				DisplayMember: "Name",       // The field to display "DropDownItem.Name"
+				BindingMember: "Key",        // The field to bind too, ie the value "DropDownItem.Key"
 				Font:          dec.Font{PointSize: 12},
 			},
 		}}}
 	log.Info(names)
 
 	for i := range names {
-		field := dec.HSplitter{
-			Children: []dec.Widget{
-				dec.TextLabel{
-					Text: labels[i],
-					Name: names[i] + "_label",
-					Font: dec.Font{PointSize: 12},
+		if names[i] != "genderDriver" {
+			field := dec.HSplitter{
+				Children: []dec.Widget{
+					dec.TextLabel{
+						Text: labels[i],
+						Name: names[i] + "_label",
+						Font: dec.Font{PointSize: 12},
+					},
+					dec.TextEdit{
+						Name:     names[i] + "_input",
+						Font:     dec.Font{PointSize: 12},
+						AssignTo: &out[i],
+						ReadOnly: values[i] != "",
+						Text:     values[i],
+					},
 				},
-				dec.TextEdit{
-					Name:     names[i] + "_input",
-					Font:     dec.Font{PointSize: 12},
-					AssignTo: &out[i],
-					ReadOnly: values[i] != "",
-					Text:     values[i],
+			}
+			fields = append(fields, field)
+		} else {
+			genderIdx := 1
+			if gender == "Θηλυκό" {
+				genderIdx = 2
+			}
+			field := dec.HSplitter{
+				Children: []dec.Widget{
+					dec.TextLabel{
+						Text: "Φύλο",
+						Font: dec.Font{PointSize: 12},
+					},
+					dec.ComboBox{
+						AssignTo:      &genderDriver,
+						Value:         genderIdx,  // Initial value if required
+						Model:         genderKeys, // The array of drop down items
+						DisplayMember: "Name",     // The field to display "DropDownItem.Name"
+						BindingMember: "Key",      // The field to bind too, ie the value "DropDownItem.Key"
+						Font:          dec.Font{PointSize: 12},
+					},
 				},
-			},
+			}
+			fields = append(fields, field)
 		}
-		fields = append(fields, field)
 	}
 
 	return fields
@@ -82,13 +110,19 @@ func createFields(labels, names, values []string) []dec.Widget {
 
 func createDoc(dirName string, db *sql.DB) {
 	c := officer.GetByCommander(db, 1)
-
 	viol := violation.GetByViolationNumber(db, out[1].Text())
+	toy := "του"
+	ston := "στον"
+	if genderDriver.Text() == "Θηλυκό" {
+		toy = "της"
+		ston = "στην"
+	}
 
 	docx.EditDoc(path.Join(SampleDir, objectionType.Text()+".docx"), path.Join(DocDir, dirName, objectionType.Text()+".docx"),
-		[]string{"<protokolo>", "<imnia_ekdosis>", "<imnia_enstansis>", "<odigos>", "<patronimo_odigou>",
-			"<arithmos_paravasis>", "<diikitis>"},
-		[]string{out[0].Text(), out[5].Text(), out[3].Text() + " " + out[2].Text(), out[4].Text(), viol.ViolationNumber,
+		[]string{"<protokolo>", "<imnia_ekdosis>", "<imnia_enstansis>", "<toy_odigos>", "<ston_odigos>",
+			"<patronimo_odigou>", "<arithmos_paravasis>", "<diikitis>"},
+		[]string{out[0].Text(), out[6].Text(), out[7].Text(), toy + " " + out[3].Text() + " " + out[2].Text(),
+			ston + " " + out[3].Text() + " " + out[2].Text(), out[4].Text(), viol.ViolationNumber,
 			c.FirstName + " " + c.LastName + " " + c.Rank})
 
 	docx.OpenDocx(path.Join(DocDir, dirName, objectionType.Text()+".docx"))
@@ -96,8 +130,22 @@ func createDoc(dirName string, db *sql.DB) {
 }
 
 func Init(db *sql.DB, violationNumber string) {
-	values := []string{"", violationNumber, "", "", "", time.Now().Format("02/01/2006")}
+	objection := GetByViolationNumber(db, violationNumber)
+	values := []string{
+		objection.AP,
+		objection.ViolationNumber,
+		objection.FirstNameDriver,
+		objection.LastNameDriver,
+		objection.MiddleNameDriver,
+		objection.GenderDriver,
+		objection.ObjectionDate,
+		objection.PublishDate,
+	}
 	mw := new(MyMainWindow)
+	buttonText := "Αποθήκευση"
+	if violationNumber != "" {
+		buttonText = "Προβολή"
+	}
 	dec.MainWindow{
 		Title:    "Καταχώρηση Παράβασης",
 		AssignTo: &mw.MainWindow,
@@ -112,6 +160,7 @@ func Init(db *sql.DB, violationNumber string) {
 						"Όνομα οδηγού",
 						"Επίθετο οδηγού",
 						"Πατρόνυμο οδηγού",
+						"Φύλο οδηγού",
 						"Ημ/νια ένστασης",
 						"Ημ/νια έκδοσης",
 					},
@@ -121,19 +170,24 @@ func Init(db *sql.DB, violationNumber string) {
 						"firstNameDriver",
 						"lastNameDriver",
 						"middleNameDriver",
+						"genderDriver",
 						"objectionDate",
 						"publishDate",
 					},
 					values,
+					objection.GenderDriver,
+					objection.DocumentType,
 				),
 			},
 			dec.PushButton{
-				Text: "Αποθήκευση",
+				Text: buttonText,
 				OnClicked: func() {
-					Insert(db, out[0].Text(), out[1].Text(), out[2].Text(), out[3].Text(), out[4].Text(), out[5].Text(),
-						out[6].Text())
 					createDoc(out[1].Text(), db)
-					mw.Close()
+					if buttonText == "Αποθήκευση" {
+						Insert(db, out[0].Text(), out[1].Text(), out[2].Text(), out[3].Text(), out[4].Text(),
+							genderDriver.Text(), out[6].Text(), out[7].Text(), objectionType.CurrentIndex()+1)
+						mw.Close()
+					}
 				},
 				Font: dec.Font{PointSize: 12},
 			},

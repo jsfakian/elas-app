@@ -3,6 +3,7 @@ package search
 import (
 	"database/sql"
 	"elasapp/decision"
+	"elasapp/objection"
 	"elasapp/violation"
 	"sort"
 	"strings"
@@ -212,7 +213,27 @@ func Init(db *sql.DB) {
 						},
 						Model: model,
 						OnItemActivated: func() {
-							violation.Init(db, model.items[tv.CurrentIndex()].viol.AP)
+							dec.MainWindow{
+								Title:  "Αναζήτηση Παράβασης",
+								Bounds: dec.Rectangle{Width: 400, Height: 400},
+								Layout: dec.VBox{},
+								Font:   dec.Font{PointSize: 12},
+								Children: []dec.Widget{
+									dec.PushButton{
+										Text: "Απόφαση Παράβασης",
+										OnClicked: func() {
+											violation.Init(db, model.items[tv.CurrentIndex()].viol.AP)
+										},
+									},
+									dec.PushButton{
+										Text: "Απόφαση Έφεσης",
+										OnClicked: func() {
+											objection.Init(db, model.items[tv.CurrentIndex()].viol.ViolationNumber)
+										},
+									},
+								},
+							}.Run()
+							//violation.Init(db, model.items[tv.CurrentIndex()].viol.AP)
 						},
 					},
 				},

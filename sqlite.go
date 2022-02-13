@@ -96,8 +96,10 @@ func createTableObjections() {
 		"first_name_driver" VARCHAR,
 		"last_name_driver" VARCHAR,
 		"middle_name_driver" VARCHAR,
+		"gender_driver" VARCHAR,
 		"objection_date" VARCHAR,
-		"publish_date" VARCHAR
+		"publish_date" VARCHAR,
+		"document_type" INTEGER
 	  );` // SQL Statement for Create Table
 
 	createTable(createObjectionTableSQL)
