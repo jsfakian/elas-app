@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"elasapp/docx"
 	"elasapp/officer"
+	"os"
 	"path"
 	"time"
 
@@ -33,9 +34,9 @@ type DropDownItem struct { // Used in the ComboBox dropdown
 
 func createFields(labels, names, values []string, comboIndex int) []dec.Widget {
 	keys := []*DropDownItem{ // These are the items to populate the drop down list
-		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΓΙΑ_ΠΡΟΣΤΙΜΑ_20_ΚΑΙ_50_ΕΥΡΩ"},
-		{2, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΠΡΟΣΤΙΜΟ_175_(ΑΦΟΡΑ_ΜΕΙΚΤΗ_ΥΠΗΡΕΣΙΑ_'Η_Α.Τ.Γ.Α.Δ.Α._Κ΄_Γ.Α.Δ.Θ.)_ΑΦΑΙΡΕΣΗ_ΑΠΟ_ΥΠΗΡΕΣΙΑ_ΑΠΟΣΤΟΛΗΣ"},
-		{3, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΠΡΟΣΤΙΜΟ_175_(ΑΦΟΡΑ_ΜΗ_ΜΕΙΚΤΗ_ΥΠΗΡΕΣΙΑ)_ΕΚΔΟΣΗ_ΑΠΟΦΑΣΗΣ_1_ΑΠΟ_Τ.Τ_ΠΕΡΙΟΧΗΣ"},
+		{1, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΓΙΑ_ΠΡΟΣΤΙΜΑ_ΚΑΙ_ΕΥΡΩ"},
+		{2, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΠΡΟΣΤΙΜΟ_ΑΦΟΡΑ_ΜΕΙΚΤΗ_ΥΠΗΡΕΣΙΑ_ΑΦΑΙΡΕΣΗ_ΑΠΟ_ΥΠΗΡΕΣΙΑ_ΑΠΟΣΤΟΛΗΣ"},
+		{3, "ΔΙΑΒΙΒΑΣΤΙΚΟ_ΠΡΟΣΤΙΜΟ_ΑΦΟΡΑ_ΜΗ_ΜΕΙΚΤΗ_ΥΠΗΡΕΣΙΑ_ΕΚΔΟΣΗ_ΑΠΟΦΑΣΗΣ_ΑΠΟ_ΤΤ_ΠΕΡΙΟΧΗΣ"},
 	}
 
 	fields := []dec.Widget{
@@ -88,18 +89,29 @@ func createDoc(dirName string, db *sql.DB) {
 	o := officer.GetByCommander(db, 0)
 	viol := GetByViolationNumber(db, out[2].Text())
 
+	if viol.PublishDate == "" {
+		viol.PublishDate = time.Now().Format("02-01-2006")
+		UpdatePublishDate(db, viol.AP, viol.PublishDate)
+	}
+	inText := []string{"armodios", "protokolo", "att", "paravasi", "imnia", "epithetoidioktiti", "onomaidioktiti",
+		"patronimoidioktiti", "dieuthunsiidioktiti", "arithmoskykloforias", "diikitis"}
+	outText := []string{o.FirstName + " " + o.LastName + " " + o.Rank, viol.AP, viol.AT, viol.ViolationNumber,
+		viol.PublishDate, viol.LastNameOwner, viol.FirstNameOwner, viol.MiddleNameOwner, viol.AddressOwner,
+		viol.RegistrationNumber, c.FirstName + " " + c.LastName + " " + c.Rank}
+
+	if _, err := os.Stat(path.Join(DocDir, dirName)); os.IsNotExist(err) {
+		os.MkdirAll(path.Join(DocDir, dirName), 0755)
+	}
+
 	docx.EditDoc(path.Join(SampleDir, violType.Text()+".docx"), path.Join(DocDir, dirName, violType.Text()+".docx"),
-		[]string{"armodios", "protokolo", "at", "paravasi", "imnia", "epithetoidioktiti", "onomaidioktiti",
-			"patronimoidioktiti", "dieuthunsiidioktiti", "arithmoskykloforias", "diikitis"},
-		[]string{o.FirstName + " " + o.LastName + " " + o.Rank, viol.AP, viol.AT, viol.ViolationNumber,
-			viol.PublishDate, viol.LastNameOwner, viol.FirstNameOwner, viol.MiddleNameOwner, viol.AddressOwner,
-			viol.RegistrationNumber, c.FirstName + " " + c.LastName + " " + c.Rank})
+		inText,
+		outText,
+	)
 
 	docx.OpenDocx(path.Join(DocDir, dirName, violType.Text()+".docx"))
 }
 
 func Init(db *sql.DB, ap string) {
-	comboIndex := -1
 	viol := GetByAP(db, ap)
 	values := []string{
 		viol.AP,
@@ -112,7 +124,7 @@ func Init(db *sql.DB, ap string) {
 		viol.AddressOwner,
 	}
 
-	comboIndex = viol.DocumentType
+	comboIndex := viol.DocumentType
 	children := []dec.Widget{
 		dec.VSplitter{
 			Children: createFields(

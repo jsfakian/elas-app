@@ -136,12 +136,12 @@ func (m *violationArray) CreateRows(db *sql.DB) {
 	violations := violation.GetByAll(db)
 
 	for i, viol := range violations {
-		decisions := decision.GetByViolationNumber(db, viol.ViolationNumber)
+		objection := objection.GetByViolationNumber(db, viol.ViolationNumber)
 		sv := new(searchViolation)
 		sv.index = i + 1
 		sv.viol = viol
-		sv.objection = len(decisions) > 0
-		sv.checked = len(decisions) == 2
+		sv.objection = viol.PublishDate != ""
+		sv.checked = objection.AP != ""
 		m.items = append(m.items, sv)
 	}
 
@@ -181,11 +181,6 @@ func Init(db *sql.DB) {
 		Children: []dec.Widget{
 			dec.VSplitter{
 				Children: []dec.Widget{
-					dec.PushButton{
-						Text: "Απόφαση για έφεση",
-						OnClicked: func() {
-						},
-					},
 					dec.TableView{
 						AssignTo:         &tv,
 						AlternatingRowBG: true,
@@ -223,6 +218,7 @@ func Init(db *sql.DB) {
 										Text: "Απόφαση Παράβασης",
 										OnClicked: func() {
 											violation.Init(db, model.items[tv.CurrentIndex()].viol.AP)
+											model.items[tv.CurrentIndex()].objection = true
 										},
 									},
 									dec.PushButton{
@@ -230,6 +226,7 @@ func Init(db *sql.DB) {
 										OnClicked: func() {
 											objection.Init(db, model.items[tv.CurrentIndex()].viol.ViolationNumber)
 										},
+										Enabled: model.items[tv.CurrentIndex()].objection,
 									},
 								},
 							}.Run()

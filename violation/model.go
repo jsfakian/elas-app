@@ -25,8 +25,8 @@ func Insert(db *sql.DB, ap, at, violationNumber, registrationNumber, firstNameOw
 	lastNameOwner, middleNameOwner, addressOwner string, documentType int) {
 	log.Println("Inserting violation record ...")
 	insertViolationSQL := `INSERT INTO violations(ap, at, violation_number,
-		registration_number, first_name_owner, middle_name_owner, last_name_owner, address_owner, publish_date, document_type) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		registration_number, first_name_owner, middle_name_owner, last_name_owner, address_owner, document_type) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	statement, err := db.Prepare(insertViolationSQL) // Prepare statement. This is good to avoid SQL injections
 	if err != nil {
 		log.Error(err)
@@ -43,11 +43,11 @@ func UpdatePublishDate(db *sql.DB, ap, publishDate string) {
 	updateViolation := `UPDATE violations set publish_date = ? WHERE ap = ?`
 	statement, err := db.Prepare(updateViolation)
 	if err != nil {
-		log.Error(err)
+		log.Error("Error preparing the update: ", err)
 	}
-	_, err = statement.Exec(ap, publishDate)
+	_, err = statement.Exec(publishDate, ap)
 	if err != nil {
-		log.Error(err)
+		log.Error("Error executing the update: ", err)
 	}
 }
 
@@ -88,7 +88,7 @@ func GetByAP(db *sql.DB, ap string) *Violation {
 	if len(viols) != 0 {
 		return viols[0]
 	} else {
-		return &Violation{}
+		return &Violation{DocumentType: -1}
 	}
 }
 

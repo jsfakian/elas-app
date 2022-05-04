@@ -6,6 +6,7 @@ import (
 	"elasapp/officer"
 	"elasapp/violation"
 	"path"
+	"time"
 
 	"github.com/lxn/walk"
 	dec "github.com/lxn/walk/declarative"
@@ -118,12 +119,16 @@ func createDoc(dirName string, db *sql.DB) {
 		ston = "στην"
 	}
 
+	inText := []string{"protokolo", "imniaekdosis", "imniaenstansis", "tnodigos", "sodigos", "patronimoodigou",
+		"paravasis", "diikitis"}
+	outText := []string{out[0].Text(), time.Now().Format("02-01-2006"), out[6].Text(), toy + " " + out[3].Text() + " " + out[2].Text(),
+		ston + " " + out[3].Text() + " " + out[2].Text(), out[4].Text(), viol.ViolationNumber,
+		c.FirstName + " " + c.LastName + " " + c.Rank}
+
 	docx.EditDoc(path.Join(SampleDir, objectionType.Text()+".docx"), path.Join(DocDir, dirName, objectionType.Text()+".docx"),
-		[]string{"<protokolo>", "<imnia_ekdosis>", "<imnia_enstansis>", "<toy_odigos>", "<ston_odigos>",
-			"<patronimo_odigou>", "<arithmos_paravasis>", "<diikitis>"},
-		[]string{out[0].Text(), out[6].Text(), out[7].Text(), toy + " " + out[3].Text() + " " + out[2].Text(),
-			ston + " " + out[3].Text() + " " + out[2].Text(), out[4].Text(), viol.ViolationNumber,
-			c.FirstName + " " + c.LastName + " " + c.Rank})
+		inText,
+		outText,
+	)
 
 	docx.OpenDocx(path.Join(DocDir, dirName, objectionType.Text()+".docx"))
 
@@ -141,13 +146,14 @@ func Init(db *sql.DB, violationNumber string) {
 		objection.ObjectionDate,
 		objection.PublishDate,
 	}
+
 	mw := new(MyMainWindow)
 	buttonText := "Αποθήκευση"
-	if violationNumber != "" {
+	if objection.AP != "" {
 		buttonText = "Προβολή"
 	}
 	dec.MainWindow{
-		Title:    "Καταχώρηση Παράβασης",
+		Title:    "Ένσταση",
 		AssignTo: &mw.MainWindow,
 		Bounds:   dec.Rectangle{Width: 900, Height: 200},
 		Layout:   dec.VBox{},
@@ -162,7 +168,6 @@ func Init(db *sql.DB, violationNumber string) {
 						"Πατρόνυμο οδηγού",
 						"Φύλο οδηγού",
 						"Ημ/νια ένστασης",
-						"Ημ/νια έκδοσης",
 					},
 					[]string{
 						"ap",
@@ -172,7 +177,6 @@ func Init(db *sql.DB, violationNumber string) {
 						"middleNameDriver",
 						"genderDriver",
 						"objectionDate",
-						"publishDate",
 					},
 					values,
 					objection.GenderDriver,
@@ -185,7 +189,8 @@ func Init(db *sql.DB, violationNumber string) {
 					createDoc(out[1].Text(), db)
 					if buttonText == "Αποθήκευση" {
 						Insert(db, out[0].Text(), out[1].Text(), out[2].Text(), out[3].Text(), out[4].Text(),
-							genderDriver.Text(), out[6].Text(), out[7].Text(), objectionType.CurrentIndex()+1)
+							genderDriver.Text(), out[6].Text(), time.Now().Format("02-01-2006"),
+							objectionType.CurrentIndex()+1)
 						mw.Close()
 					}
 				},
